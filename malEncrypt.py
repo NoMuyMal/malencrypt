@@ -1,5 +1,5 @@
 #
-#w
+# UPDATED 7/7/2023 5:07pm
 # SCRIPT WILL ENCRPYT ANY FILE IN A DIRECTORY IT IS RAN. SCRIPT IS ONLY BUILT FOR LINUX.
 # KEY FILE AND PASSWORD (ENCRPYTED) ARE CREATED AND MUST STAY WHERE THEY ARE CREATED (pw saved in cwd, .key saved in user's documents directory.)
 # CRYPTOGRAPHY MODULE REQUIRED
@@ -12,7 +12,8 @@ from cryptography.fernet import Fernet
 import platform
 
 if platform.system() != "Linux":
-    print("This script is only runnable on Linux!")
+    print("\033[91m {}\033[00m" \
+        .format("\nThis script is only runnable on Linux!\n"))
     exit()
 
 files = []
@@ -24,10 +25,19 @@ keydir = os.path.expanduser("~") + "/Documents/malEncrypt/key_" +     \
          os.path.basename(os.getcwd()) + ".key"
 
 thedir = os.path.expanduser("~") + "/Documents/malEncrypt"
-os.chmod(thedir, 0o700) # setting permissions for the key's directory
 
 if not os.path.isdir(thedir):
-        os.mkdir(thedir)
+    try:
+        os.mkdir(os.path.expanduser("~") + "/Documents/")
+        print()
+    except FileExistsError:
+        print()
+    os.mkdir(thedir)
+
+else:
+    print()
+
+os.chmod(thedir, 0o700) # setting permissions for the key's directory
 
 for file in os.listdir():
     
@@ -75,8 +85,11 @@ def encrypt():
          contentsEncrypted = Fernet(key).encrypt(contents)
         with open(file, "wb") as theFile:
             theFile.write(contentsEncrypted)
-    print("Your files have been encrypted")
-    
+    print("       Your files have been encrypted")
+
+    print("\033[95m {}\033[00m" \
+        .format("\nDo not remove the 'EncryptedPassword' file from this directory!" \
+            "\n       This file is needed for decryption!"))
 
 def decrypt():
 
@@ -94,8 +107,14 @@ def decrypt():
 
     with open("EncryptedPassword", "rb") as passw:   
         savedPass = passw.read()
-        decPass = Fernet(secretKey).decrypt(savedPass)
-   
+        
+        try:
+            decPass = Fernet(secretKey).decrypt(savedPass)
+        except:
+            print("\033[91m {}\033[00m".format("Invalid key! Could not decrypt files." \
+            "\nThis program is using a different key than the one used to encrypt these files. "))
+            exit()
+
 #While loop to decrypt files and delete extra files
         while True:
 
@@ -115,7 +134,7 @@ def decrypt():
                     if file in removeFiles:
                         os.unlink(file)
                 
-                print("Your files have been decrypted")
+                print("       Your files have been decrypted")
                 break
             else:
                 password = input(str("Wrong password. Please try again: ")).encode()
