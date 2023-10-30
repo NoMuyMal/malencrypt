@@ -1,4 +1,4 @@
-                                                              WELCOME TO MALENCRYPT 2.0 by NOMUYMAL
+                    WELCOME TO MALENCRYPT 2.0 by NOMUYMAL
 
 
 GENERAL INFORMATION:
