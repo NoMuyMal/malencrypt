@@ -212,11 +212,10 @@ def encrypt():
 
             with open(file, "wb") as theFile:
                 theFile.write(contentsEncrypted)
-                encryptedList.append(file)
 
 
         print("\nYour files have been encrypted\n")
-        writeLog("ENCRYPT", f"{os.getcwd()} directory was encrypted with {keyName}.key")
+        writeLog("ENCRYPT", f"{os.getcwd()} directory was encrypted with {len(files)} file(s) using {keyName}.key")
 
 
 ####################################################################################################################
@@ -378,7 +377,7 @@ def decrypt():
                         os.unlink(correctPasswordPath) # deletes password file after decryption
                         
                         writeLog("DECRYPT", f"{password} was used successfully and deleted.")
-                        writeLog("DECRYPT", f"{os.getcwd()} was decrypted successfully with {keyName}.key")
+                        writeLog("DECRYPT", f"{len(files)} file(s) in {os.getcwd()} was decrypted with successfully with {keyName}.key")
 
                     break
             
