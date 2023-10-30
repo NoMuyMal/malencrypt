@@ -23,8 +23,8 @@ PROGRAM RUNDOWN:
 
 Program is designed to operate in either a signle or multi-user environment.
 Each user can create and delete their own set of keys to encrypt and decrypt directories.
-All files in the directory the script is run will be encrytped and can be decrypted later.
-Before running other funcitons, users select a AES128 key they create when first running the script. 
+The program will attempt to encrypt all files in the same directory which the script is run.
+Before running other funcitons, users select a AES128 key created when first running the script. 
 
 
 Encryption Function:
