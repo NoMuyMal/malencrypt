@@ -1,9 +1,13 @@
-                                WELCOME TO MALENCRYPT 2.0 by NOMUYMAL
+                                    WELCOME TO MALENCRYPT 2.0 by NOMUYMAL
+
+
+THE ALL IN ONE ENCRYPTING SERVICE FOR LINUX DIRECTORIES USING AES128.
+RUN THE SCRIPT IN ANY DIRECTORY YOU WANT TO ENCRYPT OR DECRYPT
+SEE PROGRAM RUNDOWN FOR MORE INFORMATION.
 
 
 GENERAL INFORMATION:
 
-THE ALL IN ONE ENCRYPTING SERVICE FOR LINUX DIRECTORIES USING AES128.
 WITH OVER 500 MORE LINES OF CODE, THERE IS MUCH MORE FUNCTIONALITY TO EXPOLORE! 
 
 This application allows users to create and manange encryption keys to then encrypt and decrypt entire directories.
@@ -19,7 +23,8 @@ PROGRAM RUNDOWN:
 
 Program is designed to operate in either a signle or multi-user environment.
 Each user can create and delete their own set of keys to encrypt and decrypt directories.
-Before running any funciton, users select a AES128 key they created earlier. 
+All files in the directory the script is run will be encrytped and can be decrypted later.
+Before running other funcitons, users select a AES128 key they create when first running the script. 
 
 
 Encryption Function:
@@ -37,9 +42,11 @@ Decryption Function:
     When decrypting, the program will search for saved passwords relating to the current directory.
     If none are found, user is given a choice of passwords which relate to the chosen key.
 
-    If program is able to decrypt a password with the user's chosen key, the user will be prompted to enter the password.
+    If program is able to decrypt a password with the user's chosen key, the user will 
+    be prompted to enter the password.
     When the user types the password in correctly, the decryption process begins.
-    If password is incorrect too many times, the program will pause for a number of seconds before user can try again.
+    If password is incorrect too many times, the program will pause for a number of seconds
+    before user can try again.
 
     Once files are decrypted successfully, the program will delete the used password.
     If there is an error decrypting any of the files, the password will be saved until user recovers their files. 
