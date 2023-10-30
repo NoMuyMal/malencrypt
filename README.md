@@ -1,9 +1,10 @@
-                    WELCOME TO MALENCRYPT 2.0 by NOMUYMAL
+                                WELCOME TO MALENCRYPT 2.0 by NOMUYMAL
 
 
 GENERAL INFORMATION:
 
 THE ALL IN ONE ENCRYPTING SERVICE FOR LINUX DIRECTORIES USING AES128.
+WITH OVER 500 MORE LINES OF CODE, THERE IS MUCH MORE FUNCTIONALITY TO EXPOLORE! 
 
 This application allows users to create and manange encryption keys to then encrypt and decrypt entire directories.
 Directories are encrypted with a password, which is hashed with SHA256, encrypted with AES128, then saved in the user's documents folder.
@@ -23,7 +24,7 @@ Before running any funciton, users select a AES128 key they created earlier.
 
 Encryption Function:
 
-    Encrypting a directory will save an inputted password, hashed with SHA256. 
+    Encrypting a directory will save an user inputted password, hashed with SHA256. 
     This password will be used for authentication to decrypt the directory later.
 
     Each file in the directory will be encrypted with AES128 symmetric encryption.

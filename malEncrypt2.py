@@ -86,12 +86,12 @@ def main():
             break
 
         elif selection.lower() == "q" or selection.lower() == "quit":
-            print("\n\nThanks for using malEncrypt!\n")
+            print("\n\nThanks for using malEncrypt2.0!\n")
             break
 
-        elif selection.lower() == "t":
-            test()
-            break
+        # elif selection.lower() == "t":
+        #     test()
+        #     break
 
         else:
             print(selection, "is not a valid entry. Please try again \n")
@@ -421,7 +421,7 @@ def keyGen():
         keyPath, keyName = getKeyName()
 
     # Key must be alphanumeric
-    while not keyName.isalnum() and keyPath != "q":
+    
         print("Please enter a key name with no special characters.")
         keyPath, keyName = getKeyName()
 
@@ -539,7 +539,7 @@ def getKeyName():
         else:
             break
 
-    # Incase user wants to the calling function quit
+    # Incase user wants to the to quit the calling function
     if keyName.lower() == 'q':
         return 'q' , ""
     
@@ -559,6 +559,7 @@ def gatherFiles():
 
     for file in os.listdir(): # adds files to list except for script and directories
 
+    # These files are not added to the list
         if file == os.path.basename(sys.argv[0]): # if file == name of script
             continue
         if os.path.isdir(file):
@@ -568,14 +569,21 @@ def gatherFiles():
 
     # If user does not have perms for file, it is skipped
         if not os.access(file, os.R_OK):
-            print(f"\nNo read permissions greanted to file: {file}")
-            continue
+            if not os.access(file, os.W_OK):
+                print(f"\nNo read or write permissions greanted to file: {file}")
+                continue
+            else:
+                print(f"\nNo read permissions greanted to file: {file}")
+                continue
+
         if not os.access(file, os.W_OK):
             print(f"\nNo write permissions greanted to file: {file}")
             continue
 
+
         files.append(file)
     
+
     return files
 
 
@@ -619,13 +627,6 @@ def writeLog(function, message):
     
     # functions: DELETE KEY | GENERATE KEY | DECRYPT | ENCRYPT
     # writeLog("FUNCTION", "MESSAGE")
-
-
-#####################################################################################################################
-
-
-def test():
-    print("Nothing to test!")
 
 
 #####################################################################################################################
