@@ -1,5 +1,5 @@
 #
-# UPDATED 10/31/2023 1:27 AM CDT
+# UPDATED 10/31/2023 12:00 PM CDT
 #
 # Program used to encrypt files in a Linux directory with AES 128 symmetric encryption
 # Users manage their own keys and passwords to encrypt files for decryption later
@@ -212,10 +212,11 @@ def encrypt():
 
             with open(file, "wb") as theFile:
                 theFile.write(contentsEncrypted)
+                encryptedList.append(file)
 
 
         print("\nYour files have been encrypted\n")
-        writeLog("ENCRYPT", f"{os.getcwd()} directory was encrypted with {len(files)} file(s) using {keyName}.key")
+        writeLog("ENCRYPT", f"{os.getcwd()} directory was encrypted with {keyName}.key")
 
 
 ####################################################################################################################
@@ -299,7 +300,7 @@ def decrypt():
             if password in passwordList:
                 break
             if password.lower() == 'q':
-                print("Cancelling decryption.\n")
+                print("\nCancelling decryption.\n")
                 return
             else:
                 print("\nInvalid choice, please try again. Selection is case sensitive.")
@@ -313,7 +314,7 @@ def decrypt():
                 passwDecryptSuccess = True
                 correctPasswordPath = maindir + "/Passwords/" + password 
             except:
-                print(f"\n{password} was not able to be decrypted with {keyName}.key\n")
+                print(f"\n{password} failed to be decrypted with {keyName}.key\n")
                 writeLog("DECRYPT", f"{keyName}.key was not able to decrypt {password} for directory {os.getcwd()}")
                 return
 
@@ -324,7 +325,7 @@ def decrypt():
 
         # If user wants to quit decrypting
             if inputPassword.lower() == "q".encode():
-                print("Cancelling decryption.\n")
+                print("\nCancelling decryption.\n")
                 return
     
             SHA256.update(inputPassword)
@@ -377,12 +378,18 @@ def decrypt():
                         os.unlink(correctPasswordPath) # deletes password file after decryption
                         
                         writeLog("DECRYPT", f"{password} was used successfully and deleted.")
-                        writeLog("DECRYPT", f"{len(files)} file(s) in {os.getcwd()} was decrypted with successfully with {keyName}.key")
+                        writeLog("DECRYPT", f"{os.getcwd()} was decrypted successfully with {keyName}.key")
 
                     break
             
             # Runs if user inputted the incorrect password #! do something about script restarting
                 else:
+
+                # Incase user wants to quit
+                    if inputPassword.lower() == "q".encode():
+                        print("\nCancelling decryption.\n")
+                        return
+
 
                     counter += 1
                     if counter >= 3: 
@@ -392,6 +399,10 @@ def decrypt():
                         time.sleep(counter)
                         
                         inputPassword = getpass.getpass(str("Try again: ")).encode()
+
+                   
+
+
                         SHA256 = hashlib.new("SHA256") # resets hash function
                         SHA256.update(inputPassword)
 
