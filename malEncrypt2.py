@@ -212,8 +212,6 @@ def encrypt():
 
             with open(file, "wb") as theFile:
                 theFile.write(contentsEncrypted)
-                encryptedList.append(file)
-
 
         print("\nYour files have been encrypted\n")
         writeLog("ENCRYPT", f"{os.getcwd()} directory was encrypted with {keyName}.key")
