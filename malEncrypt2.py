@@ -214,7 +214,7 @@ def encrypt():
                 theFile.write(contentsEncrypted)
 
         print("\nYour files have been encrypted\n")
-        writeLog("ENCRYPT", f"{os.getcwd()} directory was encrypted with {keyName}.key")
+        writeLog("ENCRYPT", f"{os.getcwd()} directory was encrypted with {keyName}")
 
 
 ####################################################################################################################
@@ -312,8 +312,8 @@ def decrypt():
                 passwDecryptSuccess = True
                 correctPasswordPath = maindir + "/Passwords/" + password 
             except:
-                print(f"\n{password} failed to be decrypted with {keyName}.key\n")
-                writeLog("DECRYPT", f"Error decrypting {password} with {keyName}.key for directory {os.getcwd()}")
+                print(f"\n{password} failed to be decrypted with {keyName}\n")
+                writeLog("DECRYPT", f"Error decrypting {password} with {keyName} for directory {os.getcwd()}")
                 return
 
 
@@ -348,7 +348,7 @@ def decrypt():
                                 decryptedContents = Fernet(openedKey).decrypt(contents)
                             except:
                                 print("\n  !! Error decrypting file:", file, "!!")
-                                writeLog("DECRYPT", f"Error decrypting file: {file} with key {keyName}.key")
+                                writeLog("DECRYPT", f"Error decrypting file: {file} with key {keyName}")
                                 decryptError = True
                                 continue
                             
@@ -368,7 +368,7 @@ def decrypt():
                             debugPasswordPath = maindir + "/Passwords/" + password
 
                         os.replace(correctPasswordPath, debugPasswordPath)
-                        writeLog("DECRYPT", f"Error detected decrypting {os.getcwd()} with key {keyName}.key, saving password: {debugPasswordPath}")
+                        writeLog("DECRYPT", f"Error detected decrypting {os.getcwd()} with key {keyName}, saving password: {debugPasswordPath}")
               
                 # If there is no error, used password will be deleted  
                     else:
@@ -376,7 +376,7 @@ def decrypt():
                         os.unlink(correctPasswordPath) # deletes password file after decryption
                         
                         writeLog("DECRYPT", f"{password} was used successfully and deleted.")
-                        writeLog("DECRYPT", f"{os.getcwd()} was decrypted successfully with {keyName}.key")
+                        writeLog("DECRYPT", f"{os.getcwd()} was decrypted successfully with {keyName}")
 
                     break
             
