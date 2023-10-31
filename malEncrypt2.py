@@ -315,7 +315,7 @@ def decrypt():
                 correctPasswordPath = maindir + "/Passwords/" + password 
             except:
                 print(f"\n{password} failed to be decrypted with {keyName}.key\n")
-                writeLog("DECRYPT", f"{keyName}.key was not able to decrypt {password} for directory {os.getcwd()}")
+                writeLog("DECRYPT", f"Error decrypting {password} with {keyName}.key for directory {os.getcwd()}")
                 return
 
 
@@ -431,7 +431,7 @@ def keyGen():
         keyPath, keyName = getKeyName()
 
     # Key must be alphanumeric
-    
+    while not keyName.isalnum() and keyPath != "q":
         print("Please enter a key name with no special characters.")
         keyPath, keyName = getKeyName()
 
@@ -514,7 +514,7 @@ def removeKey():
 
     if cont.lower() == 'yes':
         os.unlink(keyPath)
-        print(keyName, "key has been deleted.\n")
+        print(f"\n{keyName}.key has been deleted.\n")
         writeLog("REMOVE KEY", f"{keyName}.key deleted")
     else:
         print("No key was deleted.\n")
