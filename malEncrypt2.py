@@ -1,11 +1,12 @@
 #
-# UPDATED 10/31/2023 12:00 PM CDT
+# UPDATED 11/1/2023 11:30 PM CDT
 #
 # Program used to encrypt files in a Linux directory with AES 128 symmetric encryption
 # Users manage their own keys and passwords to encrypt files for decryption later
 # Look at README for more information
 # BUILT TO BE USED IN LINUX ONLY
 #
+#! FIND OUT WHY LOGS ADD MULTIPLE .KEYS TO KEYNAME
 
 try:
     from cryptography.fernet import Fernet
@@ -115,7 +116,7 @@ def encrypt():
     if len(os.listdir(maindir)) <= 3:
         for item in os.listdir(maindir):
             if ".key" in item:
-                keyName = item
+                keyName = item.replace(".key", "")
                 keyPath = maindir + "/" + item
                 print(f"\n{keyName} has been selected.\n") 
     else:
@@ -214,7 +215,7 @@ def encrypt():
                 theFile.write(contentsEncrypted)
 
         print("\nYour files have been encrypted\n")
-        writeLog("ENCRYPT", f"{os.getcwd()} directory was encrypted with {keyName}")
+        writeLog("ENCRYPT", f"{os.getcwd()} directory was encrypted with {keyName}.key")
 
 
 ####################################################################################################################
@@ -236,7 +237,7 @@ def decrypt():
     if len(os.listdir(maindir)) <= 3:
         for item in os.listdir(maindir):
             if ".key" in item:
-                keyName = item
+                keyName = item.replace(".key", "")
                 keyPath = maindir + "/" + item 
                 print(f"\n{keyName} has been selected.\n") 
     else:
@@ -312,8 +313,8 @@ def decrypt():
                 passwDecryptSuccess = True
                 correctPasswordPath = maindir + "/Passwords/" + password 
             except:
-                print(f"\n{password} failed to be decrypted with {keyName}\n")
-                writeLog("DECRYPT", f"Error decrypting {password} with {keyName} for directory {os.getcwd()}")
+                print(f"\n{password} failed to be decrypted with {keyName}.key\n")
+                writeLog("DECRYPT", f"Error decrypting {password} with {keyName}.key for directory {os.getcwd()}")
                 return
 
 
@@ -368,7 +369,7 @@ def decrypt():
                             debugPasswordPath = maindir + "/Passwords/" + password
 
                         os.replace(correctPasswordPath, debugPasswordPath)
-                        writeLog("DECRYPT", f"Error detected decrypting {os.getcwd()} with key {keyName}, saving password: {debugPasswordPath}")
+                        writeLog("DECRYPT", f"Error detected decrypting {os.getcwd()} with {keyName}.key, saving password: {debugPasswordPath}")
               
                 # If there is no error, used password will be deleted  
                     else:
@@ -376,7 +377,7 @@ def decrypt():
                         os.unlink(correctPasswordPath) # deletes password file after decryption
                         
                         writeLog("DECRYPT", f"{password} was used successfully and deleted.")
-                        writeLog("DECRYPT", f"{os.getcwd()} was decrypted successfully with {keyName}")
+                        writeLog("DECRYPT", f"{os.getcwd()} was decrypted successfully with {keyName}.key")
 
                     break
             
