@@ -1,6 +1,6 @@
 #
-# VERSION 2.2.6
-# UPDATED 3/8/2024 12:00 CDT
+# VERSION 2.2.11
+# UPDATED 6/26/2024 13:30 CDT
 #
 # Program used to encrypt files in a Linux directory with AES 128 symmetric encryption
 # Users manage their own keys and passwords to encrypt files for decryption later
@@ -8,6 +8,7 @@
 # BUILT TO BE USED IN LINUX ONLY
 #
 #! TEST IF WINDOWS COMPATIBLE
+
 
 try:
     from cryptography.fernet import Fernet
@@ -23,25 +24,30 @@ import hashlib
 import os
 import platform
 import sys
-import time
+import datetime
 
+
+if platform.system() != "Linux":
+    print("This script is only runnable on Linux!\n")
+    exit()
 
 print(f'\n{"WELCOME TO MALENCRYPT":^64}')
 
 
-# This is the directory where keys, passwords, logs are saved. format: ~/Documents/malEncrypt
+# This is the directory where keys, passwords, logs are saved. 
+# format: ~/Documents/malEncrypt
 maindir = os.path.expanduser("~") + "/Documents/malEncrypt"
 
-# Creates directory for this program to operate in if not already created
+# Creates maindir and subdirectories if not already created
 if not os.path.isdir(maindir):
 
     try:
         os.mkdir(os.path.expanduser("~") + "/Documents/")
     except FileExistsError:
-        print()
+        pass
 
     os.mkdir(maindir)
-    os.chmod(maindir, 0o700)
+    os.chmod(maindir, 0o700) # sets permisions for only current user
 
     # Prints when user first runs the program
     print(f'\n{"Begin by creating a key that can be used to encrypt":^64}')
@@ -61,11 +67,16 @@ if not os.path.isdir(maindir + "/Logs/"):
         log.write(f"{'TIME':^26} | {'FUNCTION':^15} | {'TYPE':^7} | {'MESSAGE'}\n")
 
 
-###+++---
-
-# Function to kick off program and let user select other functions
 def main():
-    
+    '''
+    Function to start program and let user select functions
+
+    inputs - n/a
+
+    returns - n/a
+
+    '''   
+
     print(f'{"Enter one of the letters below to run a command":^63}\n')
     
     if platform.system() != "Linux":
@@ -76,7 +87,7 @@ def main():
     selection = ""
     while True:
         
-        selection = input(str("(E)Encrypt | (D)Decrpyt | (C)Create or (R)Remove Key | (Q)Quit: " ))
+        selection = input(str("(E)Encrypt | (D)Decrypt | (C)Create or (R)Remove Key | (Q)Quit: " ))
 
         if selection.lower() == "e" or selection.lower() == "encrypt":
             encrypt()
@@ -109,14 +120,19 @@ def main():
             print(selection, "is not a valid entry. Please try again \n")
 
 
-###+++---
-
-# Function to encrypt all files in current directory with user chosen key
-# User inputs password that is saved for decrypt function later
 def encrypt():
+    '''
+    Function to encrypt all files in current directory with user chosen key
+    User inputs password that is saved for decrypt function later
+
+    inputs - n/a
+
+    returns - n/a
+
+    '''
 
     if countKeys() <= 0:
-        print(f'\n{"No key has been created for this user yet.":^63}\n')
+        print(f'\n\n{"No key has been created for this user yet.":^63}\n')
         return
 
     # getDirectory returns user chosen directory and its base directory
@@ -124,7 +140,7 @@ def encrypt():
  
     # If user decides to quit during directory selection
     if chosenDir == 'q':
-        print()
+        print(f"\n\n{'Cancelling encryption.':^63}\n\n")
         return
 
     # Method returns a valid created key chosen by user
@@ -176,10 +192,10 @@ def encrypt():
         for passwordFile in os.listdir(maindir + "/Passwords/"):
             if dirBaseName in passwordFile:
 
-                print(f"{'The directory you are trying to encrypt':^48}")
-                print(f"{'might have been encrypted at least once already.':^48}")
+                print(f"{'The directory you are trying to encrypt':^64}")
+                print(f"{'might have been encrypted at least once already.':^64}")
                 
-                cont = input(f"{'Are you sure you want to continue (yes or no)?':^48}\n")
+                cont = input(f"\n{'Are you sure you want to continue (yes or no)?':^64}\n")
                 print()
                 break
 
@@ -225,18 +241,23 @@ def encrypt():
             with open(file, "wb") as theFile:
                 theFile.write(contentsEncrypted)
 
-        print(f"\n{'Your files have been encrypted!':^64}\n\n")
-        writeLog("ENCRYPT", f"{str(chosenDir)} directory was encrypted with {keyName}.key")
+        printGreen(f"\n{'Your files have been encrypted!':^64}\n\n")
+        writeLog("ENCRYPT", f"{len(files)} file(s) in {str(chosenDir)} directory were encrypted with {keyName}.key")
 
 
-###+++---
-
-# Function to decrypt all files in current directory with user chosen key
-# User inputs correct password to decrypt the files
 def decrypt():
+    '''
+    Function to decrypt all files in chosen directory with chosen key
+    User inputs correct password set during encrpytion to decrypt the files
+
+    inputs - n/a
+
+    returns - n/a
+
+    '''
 
     if countKeys() <= 0:
-        print(f'\n{"No key has been created for this user yet.":^63}\n')
+        print(f'\n\n{"No key has been created for this user yet.":^63}\n')
         return
     
     # getDirectory returns user chosen directory and its base directory
@@ -244,7 +265,7 @@ def decrypt():
 
     # If user decides to quit during directory selection
     if chosenDir == 'q':
-        print()
+        print(f"\n\n{'Cancelling decryption.':^63}\n\n")
         return
 
     # Method returns a valid key chosen by user
@@ -262,341 +283,162 @@ def decrypt():
     with open(keyPath, "rb") as key:
         openedKey = key.read()
 
-    passwordList = [] # Initialized list for passwords to be chosen by program for decryption
+    # Returns correct password to decrypt selected directory and its path
+    decryptedPassword, correctPasswordPath = validatePassword(openedKey,
+                                                keyName, chosenDir, dirBaseName)
 
-    # Password naming scheme: key_directory_Password
-    # Gathers available passwords with the current directory in then name for possible decryption
-    for item in os.listdir(maindir + "/Passwords/"):
-        if dirBaseName in item:
-            passwordList.append(item)
-    
-    passwDecryptSuccess = False # Initialize bool for password selection
+    # If validatePassword needs to return to main menu, the function returns 'q'
+    if decryptedPassword == "q":
+        return
 
-    # Each password will try to be decrypted until there is a success
-    for password in passwordList:
-        with open(maindir + "/Passwords/" + password) as currentPassword:
-            openedPassword = currentPassword.read()
+    passwordName = Path(correctPasswordPath).name
+# Gets user's input to compare password hashes
+    inputPassword = getpass.getpass(str("\nInput a password to decrypt your files: ")).encode()
+
+# If user wants to quit decrypting
+    if inputPassword.lower() == "q".encode():
+        print(f"\n\n{'Cancelling decryption.':^63}\n\n")
+        return
+
+    SHA256 = hashlib.new("SHA256") # create hash function for password
+    SHA256.update(inputPassword)
+
+    counter = 0 # Initialized to count number of failed password entries
+
+# While loop until user enters correct password before decrypting
+    while True:
+
+    # If the digest of inpputed password is equal to the digest of the saved password decrypting begins
+        if SHA256.hexdigest().encode() == decryptedPassword:
+
+            files = gatherFiles(chosenDir) # gathers list of files from chosen directory
+
+            decryptError = False # Initialized for error decrypting any files later
+            print()
+
+            decryptionCount = 0 # variable to count successful files decrypted
+
+        # Decrypting files in chosen directory
+            for file in files:
+                with open(file, "rb") as currentFile:
+                    contents = currentFile.read()
+                    
+                # If there is an error decrypting a file, user will be warned and error will be noted
+                    try:
+                        decryptedContents = Fernet(openedKey).decrypt(contents)
+                        decryptionCount += 1
+
+                    except:
+                        printRed(f"{f'!! Error decrypting file: {file.name} !!':^64}")
+                        writeLog("DECRYPTION", f"Error decrypting file: {file} with {keyName}.key")
+                        decryptError = True
+                        continue
+                    
+                with open(file, "wb") as currentFile:
+                    currentFile.write(decryptedContents)
+
+        #! REUSE OF CODE HERE
+            if decryptionCount == 0:
+                printRed(f"\n{f'No files were decrypted successfully.':^64}")
+                print(f"{f'Please check logs for more information.':^64}\n")
+
+                if "debug" not in passwordName:
+                    debugPasswordPath = maindir + "/Passwords/" + passwordName + "_debug"
+                else:
+                    debugPasswordPath = maindir + "/Passwords/" + passwordName
+
+                os.replace(correctPasswordPath, debugPasswordPath)
+
+                writeLog("DECRYPTION", f"Error! No files were decrypted in {str(chosenDir)} " +
+                            f"with {keyName}.key, saving password: {debugPasswordPath}")
             
-            try: 
-                decrpytedPassword = Fernet(openedKey).decrypt(openedPassword)
+            elif decryptError:
+                print(f"\n{f'Any other files were decrypted successfully.':^64}")
+                print(f"{f'Please check logs for more information.':^64}\n")
                 
-            # Password decrypted successfully if exception not thrown
-                passwDecryptSuccess = True
-                correctPasswordPath = maindir + "/Passwords/" + password
-                break
-            
-            except InvalidToken: # raises when key does not match with encrypted password
-                continue
-    
-    # If no password was able to be decrypted previously, program will find all passwords with the key name to give user a selection
-    if passwDecryptSuccess == False:
-        passwordList = []
-        passwordList = [item for item in os.listdir(maindir + "/Passwords/") if keyName in item]
-    
-    # If there is no match in key name or directory, program has no password to decrypt.
-        if passwordList == []:
-            print(f'\n{"There is nothing to decrypt with this key!":^64}')
-            print(f'{"Make sure you selected the correct key.":^64}\n')
-            return
+            #! ERROR IF DEBUG PASSWORD EXISTS, A NEW ONE WITH SAME NAME WILL OVERWRITE THE OLD ONE
+            # Saves password for debugging and writes error to log
+                if "debug" not in passwordName:
+                    debugPasswordPath = maindir + "/Passwords/" + passwordName + "_debug"
+                else:
+                    debugPasswordPath = maindir + "/Passwords/" + passwordName
 
-        print("\nPassword for this directory not found! If the directory's name changed, select password with the previous name.")
-        print("            Please type the name of the password you want to choose below or type 'q' to cancel.\n")
-        # print(*passwordList , "\n")
-       
-        lengthCondition = 79  
-        passwords = ""
+                os.replace(correctPasswordPath, debugPasswordPath)
+                
+                writeLog("DECRYPTION", f"Error while decrypting {str(chosenDir)} " +
+                            f"with {keyName}.key, saving password: {debugPasswordPath}")
 
-        for item in passwordList:
-
-        # Format output looks like: |  key1  |  key2  |  etc... |
-            passwords += "  |  " + item + "  |" # formats output for each key
-
-            # A new line is generated every 60 characters
-            if len(passwords) > lengthCondition:
-                passwords += "\n"
-                lengthCondition += 79
-
-        print(passwords)
-
-
-
-
-    # While loop for taking valid password input
-        while True:
-            password = input()
-            
-            if password in passwordList:
-                break
-            if password.lower() == 'q':
-                print(f"\n\n{'Cancelling decryption.':^63}\n\n")
-                return
-
+                writeLog("DECRYPTION", f"{decryptionCount} file(s) have been decrypted with no error.")
+                
+        
+        # If there is no error, used password will be deleted  
             else:
-                print("\nInvalid choice, please try again. Selection is case sensitive.")
+                printGreen(f"\n{'All files decrypted successfully!':^64}\n\n")
+                
+                os.unlink(correctPasswordPath) # deletes password file after decryption
+                
+                writeLog("DECRYPTION", f"{passwordName} was used successfully and deleted.")
+               
+                writeLog("DECRYPTION", f"{str(chosenDir)} with {decryptionCount} " +
+                        f"file(s) was decrypted successfully with {keyName}.key")
 
-    # Opening chosen password and trying to decrypt it
-        with open(maindir + "/Passwords/" + password) as currentPassword:
-            openedPassword = currentPassword.read()
-            
-            try: 
-                decrpytedPassword = Fernet(openedKey).decrypt(openedPassword)
-                passwDecryptSuccess = True
-                correctPasswordPath = maindir + "/Passwords/" + password 
-            except InvalidToken:
-                print(f"\n{f'{keyName} is not the correct key for {password}':^64}\n")
-                writeLog("DECRYPTION", f"Error decrypting {password} with {keyName}.key for directory {str(chosenDir)}")
-                return
+            break # breaks out of while True once decryption is attempted
+    
+    # Runs if user inputted the incorrect password #! do something about script restarting
+        else:
 
-
-    # If a password is decrypted successfully, the program will begin to decrypt files
-    if passwDecryptSuccess:
-
-        # Gets user's input to compare password hashes
-            inputPassword = getpass.getpass(str("\nInput a password to decrypt your files: ")).encode()
-
-        # If user wants to quit decrypting
+        # Incase user wants to quit decryption process
             if inputPassword.lower() == "q".encode():
                 print(f"\n\n{'Cancelling decryption.':^63}\n\n")
                 return
-    
-            SHA256 = hashlib.new("SHA256") # create hash function for password
-            SHA256.update(inputPassword)
 
-            counter = 0 # Initialized to count number of failed password entries
-
-        # While loop until user enters correct password before decrypting
-            while True:
-
-            # If the digest of inpputed password is equal to the digest of the saved password decrypting begins
-                if SHA256.hexdigest().encode() == decrpytedPassword:
-
-                    files = gatherFiles(chosenDir) # gathers list of files from chosen directory
-
-                    decryptError = False # Initialized for error decrypting any files later
-                    print()
-
-                # Decrypting files in chosen directory
-                    for file in files:
-                        with open(file, "rb") as currentFile:
-                            contents = currentFile.read()
-                            
-                        # If there is an error decrypting a file, user will be warned and error will be noted
-                            try:
-                                decryptedContents = Fernet(openedKey).decrypt(contents)
-                            except:
-                                print(f"\n{f'  !! Error decrypting file: {file.name} !!':^64}\n")
-                                writeLog("DECRYPTION", f"Error decrypting file: {file} with {keyName}.key")
-                                decryptError = True
-                                continue
-                            
-                        with open(file, "wb") as currentFile:
-                            currentFile.write(decryptedContents)
-
-                
-                    if decryptError:
-                        print(f"\n{f'Any other files were decrypted successfully.':^64}")
-                        print(f"{f'Please check logs for more information.':^64}\n")
-
-                    # Saves password for debugging and writes error to log
-                        if "debug" not in password:
-                            debugPasswordPath = maindir + "/Passwords/" + password + "_debug"
-                        else:
-                            debugPasswordPath = maindir + "/Passwords/" + password
-
-                        os.replace(correctPasswordPath, debugPasswordPath)
-                        writeLog("DECRYPTION", f"Error while decrypting {str(chosenDir)} with {keyName}.key, saving password: {debugPasswordPath}")
-              
-                # If there is no error, used password will be deleted  
-                    else:
-                        print(f"\n{'All files decrypted successfully!':^64}\n\n")
-                        os.unlink(correctPasswordPath) # deletes password file after decryption
-                        
-                        writeLog("DECRYPTION", f"{password} was used successfully and deleted.")
-                        writeLog("DECRYPTION", f"{str(chosenDir)} was decrypted successfully with {keyName}.key")
-
-                    break
+            counter += 1 # counter records number of failed password attempts
             
-            # Runs if user inputted the incorrect password #! do something about script restarting
-                else:
-
-                # Incase user wants to quit
-                    if inputPassword.lower() == "q".encode():
-                        print(f"\n\n{'Cancelling decryption.':^63}\n\n")
-                        return
-
-                    counter += 1
-                    if counter >= 4: 
-                        print("\nWrong password entered" , counter , "times. "\
-                            "Please wait" , counter , "seconds to try again.")
-                            
-                        time.sleep(counter)
-                        
-                        inputPassword = getpass.getpass(str("Try again: ")).encode()
-
-                        SHA256 = hashlib.new("SHA256") # resets hash function
-                        SHA256.update(inputPassword)
-
-                    else:
-                        inputPassword = getpass.getpass(str("Wrong password. Please try again: ")).encode()
-                        SHA256 = hashlib.new("SHA256")
-                        SHA256.update(inputPassword)
-
-    else:
-        print("Key could not decrypt a password file.")
-        print()
-        writeLog("DECRYPTION", f"{keyName}.key was not able to decrypt any passwords for directory {str(chosenDir)}")
-
-
-###+++---
-
-# Fucntion for used to create new keys for user to encrypt/decrypt with
-def keyGen():
-    
-    print("\nInsert a name for the key you want to create or 'L' for list of existing keys: ")
-    keyPath, keyName = getKeyName()
-
-    # Key must be alphanumeric and 3 characters long
-    while (len(keyName) < 3 or not keyName.isalnum()) and keyPath != "q":
-        print("\nPlease enter at least three characters for the key name with no special characters:")
-        keyPath, keyName = getKeyName()
-
-    if keyPath.lower() == 'q':
-        print()
-        return
-
-    if os.path.isfile(keyPath): # triggers if key with the same name is already generated (prints in red)
-            print("\033[91m {}\033[00m" \
-            .format(f"\n{'There is already a key generated with the same name.':^84}\n" \
-            f"{'Continuing will overwrite this key causing encrypted files to never be decrypted.':^84}\n"))
-            
-            print(f"\n{'Are you sure you want to continue (yes or no)?':^84}")
-            warning = input(str(""))
-        
-            while True:
+            if counter >= 4: 
+                print("\nWrong password entered" , counter , "times. "\
+                    "Please wait" , counter , "seconds to try again.")
+                    
+                time.sleep(counter)
                 
-                if warning.lower() == "yes":
-                    print()
-                    writeLog("GENERATE KEY", f"{keyName}.key was overwritten!")
-                    break
+                inputPassword = getpass.getpass(str("Try again: ")).encode()
 
-                elif warning.lower() == "no":
-                    print(f"\n{'Cancelling. Key was not overwritten.':^63}\n")
-                    return
-                
-                else:
-                    warning = input(str("Invalid input, please type 'yes' or 'no': ")) 
+                SHA256 = hashlib.new("SHA256") # resets hash function
+                SHA256.update(inputPassword)
 
-    key = Fernet.generate_key() # generates AES key 128 bit
-
-    with open(keyPath, "wb") as theKey: # saves key file
-        theKey.write(key)
-        
-    os.chmod(keyPath, 0o700) # only current user has perms on key file
-
-    print()
-    print(f'\n{f"{keyName} key has been created!":^64}\n\n') 
-    writeLog("CREATE KEY", f"{keyName}.key created")
-
-
-###+++---
-
-# Funciton for user to delete keys no longer needed
-def removeKey():
-
-    # Variable determines if user wants to continue with deleting key
-    cont = 'no'
-
-    if countKeys() <= 0:
-        print(f'\n{"No key has been created for this user yet.":^63}\n')
-        return
-
-    keyPath, keyName = validateKey()
-
-    if keyPath.lower() == 'q':
-        print()
-        return
-
-
-    # If password file has keyname in it, there is still files encrypted with that key
-    for file in os.listdir(maindir + "/Passwords/"):
-        if keyName in file:
-            print()
-            print(f"{'There are files encrypted with this key still':^64}")
-            print(f"{'Deleting the key will cause these files to be unrecoverable':^64}")
-            break
-
-    # Even if there are no files encrypted with key, still asking if user wants to delete key
-    print(f"\n{f'Are you sure you want to delete the {keyName} key (yes or no)?  ':^64}")
-    cont = input(str(""))
-
-
-    if cont.lower() == 'yes':
-        os.unlink(keyPath)
-        print(f'\n\n{f"{keyName}.key has been deleted.":^64}\n\n')
-        writeLog("REMOVE KEY", f"{keyName}.key deleted")
-    else:
-        print(f'\n\n{f"No key was deleted.":^64}\n\n')
-
-
-###+++---
-
-# Function for gathering user input when function asks user to select key
-# e.g. user selecting a key to encrypt with
-
-def getKeyName():
-
-    # While loop to let user select a key after listing them
-    while True:
-
-        keyName = input(str())
-
-        # List all keys if user entered 'l'
-        if keyName.lower() == 'l':
-
-        # Method returns true if keys have been created
-            if countKeys() <= 0:
-                print("\nNo keys generated yet. Please enter a name of a key to generate: ")
             else:
-                print()
+                inputPassword = getpass.getpass(str("Wrong password. Please try again: ")).encode()
+                SHA256 = hashlib.new("SHA256")
+                SHA256.update(inputPassword)
 
-            # Variables defined and ready to list keys
-                keys = ""
-                maindirList = os.listdir(maindir)
-                maindirList.sort()       
-                lengthCondition = 60  
 
-                for item in maindirList:
+def countKeys():
+    '''
+    Counts number of keys created by a user 
 
-                # Format output looks like: |  key1  |  key2  |  etc... |
-                    if ".key" in item:
-                         keys += "  |  " + item.replace(".key", "") + "  |" # formats output for each key
+    inputs - n/a
 
-                    # A new line is generated every 60 characters
-                         if len(keys) > lengthCondition:
-                            keys += "\n"
-                            lengthCondition += 60
-
-                print(keys)
-                print("\nChoose a key above: ")
+    returns - int of number of keys created
+    '''
+    numKeys = 0
     
-    # Breaks loop if user does not want to list keys
-        else:
-            break
+    for item in os.listdir(maindir):
+        if ".key" in item:
+            numKeys += 1
 
-    # Incase user wants to the to quit the calling function
-    if keyName.lower() == 'q':
-        return 'q' , ""
-    
-    # Defines the key's whole file path
-    keyPath = os.path.expanduser("~") + "/Documents/malEncrypt/" + keyName + ".key"
-
-    return keyPath, keyName
+    return numKeys
 
 
-###+++---
-
-# Function used to gather files for encryption or decrpytion
 def gatherFiles(chosenDir):
+    '''
+    Function used to gather files for encryption or decrpytion
+
+    inputs - 
+        chosenDir - full path of user chosen directory
+
+    returns - 
+        files - list of all valid files in chosenDir for encryption or decrpytion
+
+    '''
 
     # List initialized to collect all files within a directory
     files = []
@@ -635,93 +477,69 @@ def gatherFiles(chosenDir):
     return files
 
 
-###+++---
+def getKeyName():
+    '''
+    Function for gathering user input when function asks user to select key
 
-# Counts number of keys created by a user 
-def countKeys():
+    inputs - n/a
+
+    returns - 
+        keyPath - string of full path to user selected key
+        keyName - string of key file's name
+
+    additional comments - 
+        not sure if this function and validateKey() could be combined
+
+    '''
+    # While loop to let user select a key after listing them
+    while True:
+
+        keyName = input(str())
+
+    # List all keys if user entered 'l' using printKeys() function
+        if keyName.lower() == 'l':
+
+        # Method returns number of keys have been created
+            if countKeys() <= 0:
+                print("\nNo keys generated yet. Please enter a name of a key to generate: ")
+            else:
+                printKeys()
     
-    numKeys = 0
+    # Breaks loop if user does not want to list keys
+    # (if keys are listed, loop allows user to re-enter keyName)
+        else:
+            break
+
+    # Incase user wants to the to quit the calling function
+    if keyName.lower() == 'q':
+        return 'q' , ""
     
-    for item in os.listdir(maindir):
-        if ".key" in item:
-            numKeys += 1
-
-    return numKeys
-
-###+++---
-
-# Determines actions based on how many keys are generated by user & lets user select valid key
-def validateKey():
-
-    numKeys = countKeys()
-
-    if numKeys == 0:
-        print(f'\n{"No key has been created for this user yet.":^63}')
-        return "q", ""
-
-    # If only one key has been created, that key is automatically selected.
-    if numKeys == 1:
-        for item in os.listdir(maindir):
-            if ".key" in item:
-                keyName = item.replace(".key", "")
-                keyPath = maindir + "/" + item
-                print(f'\n{"%s key has been selected automatically." % keyName:^64}') 
-                
-    else:
-        
-    # If there are multiple keys, user must select a correct key
-        print("\nInsert a name for the key you want to encrypt with or 'L' for list of existing keys: ")
-        keyPath, keyName = getKeyName()
-
-     # Makes sure user selects a valid key
-        while keyName + ".key" not in os.listdir(maindir) and keyPath != "q":
-            print("\nKey not found. The selection is case sensitive. Please try again: ")
-            keyPath, keyName = getKeyName()
-    
-        if keyPath == "q":
-            return "q", ""
-
-        print(f'\n\n{"%s key has been selected." % keyName:^64}')
+    # Defines the key's whole file path
+    keyPath = os.path.expanduser("~") + "/Documents/malEncrypt/" + keyName + ".key"
 
     return keyPath, keyName
 
-###+++---
-
-# Function for writing to log file
-def writeLog(action, message):
-   
-    currentTime = time.asctime()
-
-    # Determines severity of log entry based on the message
-    if "error" in message.lower():
-        log_level = "ERROR"
-    
-    elif "debug" in message.lower():
-        log_level = "DEBUG"
-
-    else:
-        log_level = "INFO"
-
-
-
-
-  # e.g.,  Tue Oct 10 08:05:00 2023 | KEY CREATION | ERROR | MESSAGE...
-    log_entry = f"{currentTime:^26} | {action:^15} | {log_level:^7} | {message}\n"
-
-    with open(maindir + "/Logs/malEncryptLog", "a+") as log:
-            log.write(log_entry)
-    
-    # Actions:
-    #    REMOVE KEY | GENERATE KEY | DECRYPTION | ENCRYPT
-
-
-###+++---
-
-# Function allows user to choose directory when encrypting or decrypting
-# Mode parameter is either encrypt when encrypting or decrypt when decrypting
-# User should be able to select a file, then choose multiple files
 
 def getDirectory(mode):
+    '''
+    Function allows user to choose directory when encrypting or decrypting
+
+    inputs - 
+        mode - string is either 'encrypt' when encrypting or 'decrypt' when decrypting
+
+    returns - 
+        dirPath - string of full path of directory chosen by user
+        
+        dirBaseName - string of directory's base name chosen by user
+                        e.g. if dirPath = '/root/Documents/malEncrypt'
+                            then dirBaseName = 'malEncrypt'
+
+    additional comments - 
+
+        User should be able to select a file, then choose multiple files
+
+    '''
+
     #! USING DIR DOT NOTATION WORKS SOMEWHAT AND DOESNT LOOK GOOD IN LOGS
     while True:
 
@@ -741,6 +559,7 @@ def getDirectory(mode):
             print("\nDot notation is not supported yet.")
             continue
         
+        # If user entered directory relative to their current directory
         if os.path.isdir(os.getcwd() + "/" + inputDir) and inputDir[0] != "/":
             inputDir = os.getcwd() + "/" + inputDir
             break
@@ -769,10 +588,357 @@ def getDirectory(mode):
     return dirPath, dirBaseName
 
 
-###+++---
+def keyGen():
+    '''
+    Fucntion for used to create new keys for user to encrypt/decrypt with
 
-def test():
-    print("Nothing to test!")
+    inputs - n/a
+
+    returns - n/a
+
+    '''
+
+    # gathers input for key name and its full path to be generated
+    print("\nInsert a name for the key you want to create or 'L' for list of existing keys: ")
+    keyPath, keyName = getKeyName()
+
+    # Key must be alphanumeric and 3 characters long
+    while (len(keyName) < 3 or not keyName.isalnum()) and keyPath != "q":
+        print("\nPlease enter at least three characters for the key name with no special characters:")
+        keyPath, keyName = getKeyName()
+
+    if keyPath.lower() == 'q':
+        print(f"\n\n{'No key created.':^63}\n\n")
+        return
+
+    # triggers if key with the same name is already generated
+    if os.path.isfile(keyPath):         
+
+        # message will be printed in red text from printRed() function
+        messageInRed =  \
+        f"\n{'There is already a key generated with the same name.':^84}\n" \
+        f"{'Continuing will overwrite this key causing encrypted files to never be decrypted.':^84}\n"
+        
+        printRed(messageInRed)
+        
+        print(f"\n{'Are you sure you want to continue (yes or no)?':^84}")
+        warning = input(str(""))
+    
+        while True:
+            if warning.lower() == "yes":
+                print()
+                writeLog("GENERATE KEY", f"{keyName}.key was overwritten!")
+                break
+
+            elif warning.lower() == "no":
+                printGreen(f"\n{'Cancelling. Key was not overwritten.':^63}\n")
+                return
+            
+            else:
+                warning = input(str("Invalid input, please type 'yes' or 'no': ")) 
+
+    key = Fernet.generate_key() # generates AES key 128 bit
+
+    with open(keyPath, "wb") as theKey: # saves key file
+        theKey.write(key)
+        
+    os.chmod(keyPath, 0o700) # only current user has perms on key file
+
+    print()
+    printGreen(f'\n{f"{keyName} key has been created!":^64}\n\n') 
+    writeLog("CREATE KEY", f"{keyName}.key created")
+
+
+def printGreen(message):
+    '''
+    Function prints message inserted in green to the terminal
+
+    inputs - 
+        message - string to be printed to terminal in green
+
+    returns - n/a
+    
+    '''
+
+    # Colors text in red
+    print("\033[92m {}\033[00m".format(message))
+
+
+def printKeys():
+    '''
+    Function used to print list of created keys when user prompts to
+
+    inputs - n/a
+
+    returns - n/a
+    '''
+    
+
+    # Variables defined for listing keys
+    keys = ""
+    maindirList = os.listdir(maindir)
+    maindirList.sort()       
+    lengthCondition = 60  
+
+    for item in maindirList:
+
+    # Format output looks like: |  key1  |  key2  |  etc... |
+        if ".key" in item:
+            keys += "  |  " + item.replace(".key", "") + "  |" 
+
+    # A new line is generated every 60 characters
+            if len(keys) > lengthCondition:
+                keys += "\n"
+                lengthCondition += 60
+    
+    print()
+    print(keys)
+    print("\nChoose a key above: ")
+
+
+def printRed(message):
+    '''
+    Function prints message inserted in red to the terminal
+
+    inputs - 
+        message - string to be printed to terminal in red
+
+    returns - n/a
+    
+    '''
+
+    # Colors text in red
+    print("\033[91m {}\033[00m".format(message))
+
+
+def removeKey():
+    '''
+    Funciton for user to delete keys user deems no longer needed
+
+    inputs - n/a
+
+    returns - n/a
+
+    '''
+
+
+    # User selects key with validateKey() function
+    keyPath, keyName = validateKey()
+
+    if keyPath.lower() == 'q':
+        print()
+        return
+
+    # If a password file has keyName in it, there is still files encrypted with that key
+    for file in os.listdir(maindir + "/Passwords/"):
+        if keyName in file:
+            print()
+            printRed(f"{'There are files encrypted with this key still':^64}")
+            printRed(f"{'Deleting the key will cause these files to be unrecoverable':^64}")
+            break
+
+    # Variable determines if user wants to continue with deleting key
+    cont = 'no'
+
+    # Even if there are no files encrypted with key, still confirms if user wants to delete key
+    print(f"\n{f'Are you sure you want to delete the {keyName} key (yes or no)?  ':^64}")
+    cont = input(str(""))
+
+    # Deletes key and writes to log if user said yes
+    if cont.lower() == 'yes':
+        os.unlink(keyPath)
+        printGreen(f'\n\n{f"{keyName}.key has been deleted.":^64}\n\n')
+        writeLog("REMOVE KEY", f"{keyName}.key deleted")
+    else:
+        printGreen(f'\n\n{f"No key was deleted.":^64}\n\n')
+
+
+def validateKey():
+    '''
+    Determines actions based on how many keys are generated by user & lets user select valid key
+
+    inputs - n/a
+
+    returns - 
+        keyPath - string of full path to user selected key
+        keyName - string of key file's name 
+
+    '''
+
+    numKeys = countKeys()
+
+    if numKeys == 0:
+        print(f'\n\n{"No key has been created for this user yet.":^63}')
+        return "q", ""
+
+    # If only one key has been created, that key is automatically selected.
+    if numKeys == 1:
+        for item in os.listdir(maindir):
+            if ".key" in item:
+                keyName = item.replace(".key", "")
+                keyPath = maindir + "/" + item
+                print(f'\n{"%s key has been selected automatically." % keyName:^64}') 
+                
+    else:
+        
+    # If there are multiple keys, user must select a correct key
+        print("\nInsert a name for the key you want to encrypt with or 'L' for list of existing keys: ")
+        keyPath, keyName = getKeyName()
+
+     # Makes sure user selects a valid key
+        while keyName + ".key" not in os.listdir(maindir) and keyPath != "q":
+            print("\nKey not found. The selection is case sensitive. Please try again: ")
+            keyPath, keyName = getKeyName()
+    
+        if keyPath == "q":
+            return "q", ""
+
+        print(f'\n\n{"%s key has been selected." % keyName:^64}')
+
+    return keyPath, keyName
+
+
+def validatePassword(openedKey, keyName, chosenDir, dirBaseName):
+    '''
+    Function selects correct password that matches users chosen key when decrypting
+
+    inputs - 
+        openedKey - binary string of key user selected
+        keyName - string of the name of user selected key
+        chosenDir - string with user selected directory path (used only for logs)
+        dirBaseName - string with user selected directory's base name
+
+    returns - 
+        decryptedPassword - binary string of the password hash after its decrypted
+        correctPasswordPath - string of the full password path if success decrypting 
+
+    '''
+
+    passwordList = [] # Initialized list for passwords to be chosen by program for decryption
+
+    # Password naming scheme: key_directory_Password
+    # Gathers available passwords with the current directory in then name for possible decryption
+    for item in os.listdir(maindir + "/Passwords/"):
+        if dirBaseName in item:
+            passwordList.append(item)
+
+    decryptFail = True
+    # Each password will try to be decrypted until there is a success
+    for password in passwordList:
+        with open(maindir + "/Passwords/" + password) as currentPassword:
+            openedPassword = currentPassword.read().encode()
+            
+        try: 
+            decryptedPassword = Fernet(openedKey).decrypt(openedPassword)
+            
+        # Password decrypted successfully if exception not thrown
+            decryptFail = False
+            correctPasswordPath = maindir + "/Passwords/" + password
+            break
+        
+        except InvalidToken: # raises when key does not match with encrypted password
+            continue
+        # If no password was able to be decrypted previously, program will find all passwords with the key name to give user a selection
+            
+    if decryptFail == True:
+        # List to hold all passwords that have been created with selected key
+        passwordList = []
+        passwordList = [item for item in os.listdir(maindir +
+                        "/Passwords/") if keyName in item]
+    
+    # If there is no match in key name or directory, program has no password to decrypt.
+        if passwordList == []:
+            printRed(f'\n{"There is nothing to decrypt with this key!":^64}')
+            printRed(f'{"Make sure you selected the correct key.":^64}\n\n')
+            return "q" , ""
+    
+    # Single quotes caused errors so had to make these variables
+        message1 = "If the directory's name changed, select password with the previous name."
+        message2 = "Please insert the password you want to choose or type 'q' to cancel."
+
+        printRed(f'\n\n{"Password for this directory not found!":^79}\n')
+        print(f'{message1:^79}')
+        print(f'{message2:^79}\n')
+        
+        lengthCondition = 79  
+        passwords = ""
+
+        for item in passwordList:
+
+        # Format output looks like: |  key1  |  key2  |  etc... |
+            passwords += "  |  " + item + "  |" # formats output for each key
+
+            # A new line is generated every 60 characters
+            if len(passwords) > lengthCondition:
+                passwords += "\n"
+                lengthCondition += 79
+
+        print(passwords)
+        print()
+
+    # While loop for taking valid password input
+        while True:
+            password = input()
+            
+            if password in passwordList:
+                break
+            if password.lower() == 'q':
+                print(f"\n\n{'Cancelling decryption.':^63}\n\n")
+                return "q", ""
+
+            else:
+                print("\nInvalid choice, please try again. Selection is case sensitive.")
+
+    # Opening chosen password and trying to decrypt it
+        with open(maindir + "/Passwords/" + password) as currentPassword:
+            openedPassword = currentPassword.read().encode()
+            
+            try: 
+                decryptedPassword = Fernet(openedKey).decrypt(openedPassword)
+                correctPasswordPath = maindir + "/Passwords/" + password 
+            except InvalidToken:
+                print(f"\n{f'{keyName} is not the correct key for {password}':^64}\n")
+                writeLog("DECRYPTION", f"Error decrypting {password} with {keyName}.key for directory {str(chosenDir)}")
+                
+                return "q", ""
+
+    return decryptedPassword, correctPasswordPath
+
+
+def writeLog(action, message):
+    '''
+    Function for writing to log file
+
+    inputs -
+        action - string that describes the action being taken in the log entry
+        message - string that is the actual message of the log entry
+
+    returns - n/a
+
+    '''
+
+    currentTime = datetime.datetime.now() # Creates and formats time for logs
+    formattedTime = currentTime.strftime('%a %b %d %Y %H:%M:%S')
+
+    # Determines severity of log entry based on the message
+    if "error" in message.lower():
+        log_level = "ERROR"
+    
+    elif "debug" in message.lower():
+        log_level = "DEBUG"
+
+    else:
+        log_level = "INFO"
+
+
+  # e.g.,  Tue Oct 10 2023 08:05:00 | GENERATE KEY | ERROR | MESSAGE...
+    log_entry = f"{formattedTime:^26} | {action:^15} | {log_level:^7} | {message}\n"
+
+    with open(maindir + "/Logs/malEncryptLog", "a+") as log:
+            log.write(log_entry)
+    
+    # Actions:
+    #    REMOVE KEY | GENERATE KEY | DECRYPTION | ENCRYPT
 
 
 ###+++---
