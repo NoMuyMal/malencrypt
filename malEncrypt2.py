@@ -1,6 +1,6 @@
 #
-# VERSION 2.2.11
-# UPDATED 6/26/2024 13:30 CDT
+# VERSION 2.2.12
+# UPDATED 7/6/2024 18:00 CDT
 #
 # Program used to encrypt files in a Linux directory with AES 128 symmetric encryption
 # Users manage their own keys and passwords to encrypt files for decryption later
@@ -144,7 +144,7 @@ def encrypt():
         return
 
     # Method returns a valid created key chosen by user
-    keyPath, keyName = validateKey()
+    keyPath, keyName = validateKey("encrypt")
 
     # If user decides to quit during key selection
     if keyPath == 'q':
@@ -269,7 +269,7 @@ def decrypt():
         return
 
     # Method returns a valid key chosen by user
-    keyPath, keyName = validateKey()
+    keyPath, keyName = validateKey("decrypt")
 
     # If user decides to quit during key selection
     if keyPath == 'q':
@@ -292,10 +292,10 @@ def decrypt():
         return
 
     passwordName = Path(correctPasswordPath).name
-# Gets user's input to compare password hashes
+    # Gets user's input to compare password hashes
     inputPassword = getpass.getpass(str("\nInput a password to decrypt your files: ")).encode()
 
-# If user wants to quit decrypting
+    # If user wants to quit decrypting
     if inputPassword.lower() == "q".encode():
         print(f"\n\n{'Cancelling decryption.':^63}\n\n")
         return
@@ -305,95 +305,21 @@ def decrypt():
 
     counter = 0 # Initialized to count number of failed password entries
 
-# While loop until user enters correct password before decrypting
+    # While loop until user enters correct password before decrypting
     while True:
 
-    # If the digest of inpputed password is equal to the digest of the saved password decrypting begins
-        if SHA256.hexdigest().encode() == decryptedPassword:
+        # If the digest of inpputed password is equal to the digest of the saved password decrypting begins
+        # If the inputted password is not equal, user tried again
+        if SHA256.hexdigest().encode() != decryptedPassword:
 
-            files = gatherFiles(chosenDir) # gathers list of files from chosen directory
-
-            decryptError = False # Initialized for error decrypting any files later
-            print()
-
-            decryptionCount = 0 # variable to count successful files decrypted
-
-        # Decrypting files in chosen directory
-            for file in files:
-                with open(file, "rb") as currentFile:
-                    contents = currentFile.read()
-                    
-                # If there is an error decrypting a file, user will be warned and error will be noted
-                    try:
-                        decryptedContents = Fernet(openedKey).decrypt(contents)
-                        decryptionCount += 1
-
-                    except:
-                        printRed(f"{f'!! Error decrypting file: {file.name} !!':^64}")
-                        writeLog("DECRYPTION", f"Error decrypting file: {file} with {keyName}.key")
-                        decryptError = True
-                        continue
-                    
-                with open(file, "wb") as currentFile:
-                    currentFile.write(decryptedContents)
-
-        #! REUSE OF CODE HERE
-            if decryptionCount == 0:
-                printRed(f"\n{f'No files were decrypted successfully.':^64}")
-                print(f"{f'Please check logs for more information.':^64}\n")
-
-                if "debug" not in passwordName:
-                    debugPasswordPath = maindir + "/Passwords/" + passwordName + "_debug"
-                else:
-                    debugPasswordPath = maindir + "/Passwords/" + passwordName
-
-                os.replace(correctPasswordPath, debugPasswordPath)
-
-                writeLog("DECRYPTION", f"Error! No files were decrypted in {str(chosenDir)} " +
-                            f"with {keyName}.key, saving password: {debugPasswordPath}")
-            
-            elif decryptError:
-                print(f"\n{f'Any other files were decrypted successfully.':^64}")
-                print(f"{f'Please check logs for more information.':^64}\n")
-                
-            #! ERROR IF DEBUG PASSWORD EXISTS, A NEW ONE WITH SAME NAME WILL OVERWRITE THE OLD ONE
-            # Saves password for debugging and writes error to log
-                if "debug" not in passwordName:
-                    debugPasswordPath = maindir + "/Passwords/" + passwordName + "_debug"
-                else:
-                    debugPasswordPath = maindir + "/Passwords/" + passwordName
-
-                os.replace(correctPasswordPath, debugPasswordPath)
-                
-                writeLog("DECRYPTION", f"Error while decrypting {str(chosenDir)} " +
-                            f"with {keyName}.key, saving password: {debugPasswordPath}")
-
-                writeLog("DECRYPTION", f"{decryptionCount} file(s) have been decrypted with no error.")
-                
-        
-        # If there is no error, used password will be deleted  
-            else:
-                printGreen(f"\n{'All files decrypted successfully!':^64}\n\n")
-                
-                os.unlink(correctPasswordPath) # deletes password file after decryption
-                
-                writeLog("DECRYPTION", f"{passwordName} was used successfully and deleted.")
-               
-                writeLog("DECRYPTION", f"{str(chosenDir)} with {decryptionCount} " +
-                        f"file(s) was decrypted successfully with {keyName}.key")
-
-            break # breaks out of while True once decryption is attempted
-    
-    # Runs if user inputted the incorrect password #! do something about script restarting
-        else:
-
-        # Incase user wants to quit decryption process
+            # Incase user wants to quit decryption process
             if inputPassword.lower() == "q".encode():
                 print(f"\n\n{'Cancelling decryption.':^63}\n\n")
                 return
 
             counter += 1 # counter records number of failed password attempts
             
+            #! do something about script restarting
             if counter >= 4: 
                 print("\nWrong password entered" , counter , "times. "\
                     "Please wait" , counter , "seconds to try again.")
@@ -409,6 +335,74 @@ def decrypt():
                 inputPassword = getpass.getpass(str("Wrong password. Please try again: ")).encode()
                 SHA256 = hashlib.new("SHA256")
                 SHA256.update(inputPassword)
+
+
+        else: # runs if correct password was inputted 
+            
+            # gathers list of files from chosen directory
+            files = gatherFiles(chosenDir) 
+
+            # Initialized incase of errors decrypting any files later
+            decryptError = False 
+            print()
+
+            # variable to count successful files decrypted
+            decryptionCount = 0 
+
+            # Decrypting files in chosen directory
+            for file in files:
+                with open(file, "rb") as currentFile:
+                    contents = currentFile.read()
+                    
+                    # If there is an error decrypting a file, user will be warned and error will be noted
+                    try:
+                        decryptedContents = Fernet(openedKey).decrypt(contents)
+                        decryptionCount += 1
+
+                    except:
+                        printRed(f"{f'!! Error decrypting file: {file.name} !!':^64}")
+                        writeLog("DECRYPTION", f"Error decrypting file: {file} with {keyName}.key")
+                        decryptError = True
+                        continue
+                    
+                with open(file, "wb") as currentFile:
+                    currentFile.write(decryptedContents)
+
+            if decryptionCount == 0:
+                printRed(f"\n{f'No files were decrypted successfully.':^64}")
+                print(f"{f'Please check logs for more information.':^64}\n")
+                
+                # Saves password for debugging and writes error to log
+                debugPasswordPath = saveDebugPassword(correctPasswordPath)
+
+                writeLog("DECRYPTION", f"Error! No files were decrypted in {str(chosenDir)} " +
+                            f"with {keyName}.key, saving password: {debugPasswordPath}")
+            
+            #! ASK IF USER WANTS TO SAVE DEBUG PASSWORD
+            elif decryptError:
+                print(f"\n{f'Any other files were decrypted successfully.':^64}")
+                print(f"{f'Please check logs for more information.':^64}\n")
+                
+                # Saves password for debugging and writes error to log
+                debugPasswordPath = saveDebugPassword(correctPasswordPath)
+                
+                writeLog("DECRYPTION", f"Error while decrypting {str(chosenDir)} " +
+                            f"with {keyName}.key, saving password: {debugPasswordPath}")
+
+                writeLog("DECRYPTION", f"{decryptionCount} file(s) have been decrypted with no error.")
+                
+            # If there is no error, used password will be deleted  
+            else:
+                printGreen(f"\n{'All files decrypted successfully!':^64}\n\n")
+                
+                os.unlink(correctPasswordPath) # deletes password file after decryption
+                
+                writeLog("DECRYPTION", f"{passwordName} was used successfully and deleted.")
+               
+                writeLog("DECRYPTION", f"{str(chosenDir)} with {decryptionCount} " +
+                        f"file(s) was decrypted successfully with {keyName}.key")
+
+            break # breaks out of while True once decryption is attempted
 
 
 def countKeys():
@@ -543,7 +537,7 @@ def getDirectory(mode):
     #! USING DIR DOT NOTATION WORKS SOMEWHAT AND DOESNT LOOK GOOD IN LOGS
     while True:
 
-        inputDir = input(f"\nPlease select a directory to {mode} (enter for cwd):\n")
+        inputDir = input(f"\nPlease select a directory to {mode} (press enter for cwd):\n")
 
         # If user wants to quit and there is no directory named "q" in cwd
         if inputDir == "q" and not os.path.isdir(os.getcwd() + "/" + "q"):
@@ -599,7 +593,7 @@ def keyGen():
     '''
 
     # gathers input for key name and its full path to be generated
-    print("\nInsert a name for the key you want to create or 'L' for list of existing keys: ")
+    print("\nInsert a name for the key you want to create (type 'L' for a list of existing keys): ")
     keyPath, keyName = getKeyName()
 
     # Key must be alphanumeric and 3 characters long
@@ -660,7 +654,7 @@ def printGreen(message):
     
     '''
 
-    # Colors text in red
+    # Colors text in greens
     print("\033[92m {}\033[00m".format(message))
 
 
@@ -723,7 +717,7 @@ def removeKey():
 
 
     # User selects key with validateKey() function
-    keyPath, keyName = validateKey()
+    keyPath, keyName = validateKey("remove")
 
     if keyPath.lower() == 'q':
         print()
@@ -753,11 +747,56 @@ def removeKey():
         printGreen(f'\n\n{f"No key was deleted.":^64}\n\n')
 
 
-def validateKey():
+def saveDebugPassword(correctPasswordPath):
     '''
-    Determines actions based on how many keys are generated by user & lets user select valid key
+    Function to save password if there is an error in decrypting
 
-    inputs - n/a
+    Inputs - 
+        correctPasswordPath - string of the path of password attempted to decrypt
+
+    Returns - 
+        debugPasswordPath - string of the path of new debug password to be saved
+    '''
+  
+    # If error decrypting, password is saved
+    if "debug" not in correctPasswordPath:
+        debugPasswordPath = correctPasswordPath + "_debug"
+    
+    else:
+    
+        # Counter used to add digits to the end of password file name to mitigate overwriting passwords
+        counter = 2 
+        
+        # While loop to make sure passwords are not overwritten
+        while os.path.isfile(correctPasswordPath):
+        
+        # If no number is after password file name, 2 is added to the
+        #  end of the name. e.g. key_dir_password_debug2
+            if correctPasswordPath[-1] == 'g':
+                debugPasswordPath = correctPasswordPath + '2'
+                break
+      
+        # If pasword name already has number, the counter counts up until new
+        #   number is found to replace old number. e.g. key_dir_password_debug3
+            elif correctPasswordPath[-1] != str(counter):
+                debugPasswordPath = correctPasswordPath[:-1] + str(counter)
+                break
+
+            counter += 1
+
+    os.replace(correctPasswordPath, debugPasswordPath)
+
+    return debugPasswordPath
+
+
+def validateKey(mode):
+    '''
+    Determines actions based on how many keys are generated by user & 
+        lets user select valid key
+
+    inputs -
+        mode - string of function that called validateKey
+                (for formatting purposes)
 
     returns - 
         keyPath - string of full path to user selected key
@@ -781,8 +820,12 @@ def validateKey():
                 
     else:
         
+        # makes string say "encrypt with" or "decrypt with"
+        if mode == "encrypt" or mode == "decrypt":
+            mode += " with"
+
     # If there are multiple keys, user must select a correct key
-        print("\nInsert a name for the key you want to encrypt with or 'L' for list of existing keys: ")
+        print(f"\nInsert a name for the key you want to {mode} (type 'L' for a list of existing keys): ")
         keyPath, keyName = getKeyName()
 
      # Makes sure user selects a valid key
